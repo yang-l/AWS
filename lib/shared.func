@@ -1,0 +1,49 @@
+## print out message to the console
+console_output () {
+    # $1 - output message level: INFO/WARN/ERROR/..
+    # $2 - message contents
+
+    # Black        tput setaf 0
+    # Red          tput setaf 1
+    # Green        tput setaf 2
+    # Yellow       tput setaf 3
+    # Blue         tput setaf 4
+    # Magenta      tput setaf 5
+    # Cyan         tput setaf 6
+    # White        tput setaf 7
+    # Text Reset   tput sgr0
+
+    local MSG_LEVEL
+
+    case $(echo "$1" | awk '{print tolower($0)}') in
+        d | debug )
+            MSG_LEVEL="$(tput setaf 5)DEBUG$(tput sgr0)" ;;
+
+        e | error )
+            MSG_LEVEL="$(tput setaf 1)ERROR$(tput sgr0)" ;;
+
+        i | info )
+            MSG_LEVEL="$(tput setaf 2)INFO$(tput sgr0)" ;;
+
+        w | warn )
+            MSG_LEVEL="$(tput setaf 3)WARN$(tput sgr0)" ;;
+
+        * )
+            MSG_LEVEL="$(tput setaf 4)UNKNOWN$(tput sgr0)" ;;
+    esac
+
+    echo $(date +"%Y-%m-%d %H:%M:%S") " [" $MSG_LEVEL "] " "$2"
+
+    return 0
+}
+
+## test if a var is empty
+is_empty () {
+    # $1: var to test
+
+    if [ -z ${1+if_unset} ]; then
+        echo true
+    else
+        echo false
+    fi
+}

@@ -1,0 +1,18 @@
+Required commands:
+bash / curl / openssl / xz
+
+Directories:
+bin/
+    file_encryption.sh          -  file encryption/decryption
+
+config/
+    custom.cfg                  -  custom configurations
+    script.cfg                  -  script configurations
+
+lib/
+    custom.func                 -  custom configuration library
+    desc_key.func               -  decryption key/password handling library
+    folder.func                 -  folder creation library
+    file_encryption.func        -  encryption library
+    script.func                 -  script configuration library
+    shared.func                 -  shared function library

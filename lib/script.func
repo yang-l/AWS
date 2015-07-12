@@ -1,0 +1,29 @@
+# import shared functions
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/./shared.func
+
+##
+# script path configuration
+##
+
+# import script configuration
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../config/script.cfg
+
+# list of bash commands used by the scripts
+__COMMANDS__=( curl openssl xz )
+
+# set bash commands path
+for __COMMAND__ in "${__COMMANDS__[@]}"
+do
+    # get the path from the configuration file
+    eval __PATH__=\$${__COMMAND__^^}
+
+    # assign the command path
+    declare -r _${__COMMAND__^^}=${__PATH__:-`which $__COMMAND__ 2>/dev/null`}
+
+    # check availablity of the command file
+    eval __PATH__=\$_${__COMMAND__^^}
+    if [ ! -f $__PATH__ ] `# no file` || [ -z $__PATH__ ] `# empty string` ; then console_output "ERROR" "File $__PATH__ for ${__COMMAND__} does not exist. Existing ..." ; exit 127 ; fi
+done
+
+unset __COMMAND__
+unset __PATH__

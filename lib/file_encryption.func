@@ -1,0 +1,112 @@
+# import user configuration
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/./script.func
+
+__OPENSSL_FILE_EXT__="openssl"
+__XZ_FILE_EXT__="xz"
+
+__ENCRYTPTION_FOLDER_DEF__="encrypted/"
+__DECRYTPTION_FOLDER_DEF__="decrypted/"
+
+function encrypt_file {
+
+    # $1 - key file
+    # $2 - input file
+    # $3 - output file
+
+    if [[ $# -eq 0 ]]; then
+        console_output "WARN" "No arguments supplied, skipping ..."
+        exit 1
+    elif [[ $# -eq 1 ]]; then
+        console_output "WARN" "No input file supplied, skipping ..."
+        exit 1
+    elif [[ ! -e $2 ]]; then
+        console_output "WARN" "[$2] is not exist, skipping ..."
+        exit 1
+    elif [[ -d $2 ]]; then
+        console_output "INFO" "[$2] is a folder, skipping ..."
+        exit 1
+    fi
+
+    local INPUT_FILE_NAME=`basename $2`
+    local INPUT_FILE_PATH=`dirname $2`
+
+    local OUTPUT_FILE_NAME=$INPUT_FILE_NAME.$__OPENSSL_FILE_EXT__.$__XZ_FILE_EXT__
+    local OUTPUT_FILE_PATH=$INPUT_FILE_PATH/$__ENCRYTPTION_FOLDER_DEF__
+
+    if [[ -z $3 ]]; then
+        console_output "INFO" "Output argument is not supplied, and output file will be based on input string"
+    elif [[ -d $3 ]]; then
+        OUTPUT_FILE_PATH=$3
+    else
+        OUTPUT_FILE_NAME=`basename $3`
+        OUTPUT_FILE_PATH=`dirname $3`
+    fi
+
+    console_output "DEBUG" "Output file name [$OUTPUT_FILE_NAME]"
+    console_output "DEBUG" "Output file path [$OUTPUT_FILE_PATH]"
+
+    # create output folder
+    [ -d "$OUTPUT_FILE_PATH" ] || console_output "INFO" "Creating folder $OUTPUT_FILE_PATH" && mkdir -p $OUTPUT_FILE_PATH || exit 1
+
+    console_output "INFO" "Encrypting $INPUT_FILE_PATH/$INPUT_FILE_NAME"
+
+    $_OPENSSL cms -encrypt -aes256 -binary -indef -in $INPUT_FILE_PATH/$INPUT_FILE_NAME $1 | $_XZ -c -> $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
+}
+
+function decrypt_file {
+
+    # $1 - key file
+    # $2 - input file
+    # $3 - output file
+
+    local INPUT_FILE_NAME=`basename $2`
+    local INPUT_FILE_PATH=`dirname $2`
+
+    local OUTPUT_FILE_NAME=`echo $INPUT_FILE_NAME | sed "s|\.$__OPENSSL_FILE_EXT__\.$__XZ_FILE_EXT__$||"`
+    local OUTPUT_FILE_PATH=$INPUT_FILE_PATH/$__DECRYTPTION_FOLDER_DEF__
+
+   if [[ -z $3 ]]; then
+        console_output "INFO" "Output argument is not supplied, and output file will be based on input string"
+    elif [[ -d $3 ]]; then
+        OUTPUT_FILE_PATH=$3
+    else
+        OUTPUT_FILE_NAME=`basename $3`
+        OUTPUT_FILE_PATH=`dirname $3`
+    fi
+
+    console_output "DEBUG" "Output file name [$OUTPUT_FILE_NAME]"
+    console_output "DEBUG" "Output file path [$OUTPUT_FILE_PATH]"
+
+    # create output folder
+    [ -d "$OUTPUT_FILE_PATH" ] || console_output "INFO" "Creating folder $OUTPUT_FILE_PATH" && mkdir -p $OUTPUT_FILE_PATH || exit 1
+
+    console_output "INFO" "Decrypting $INPUT_FILE_PATH/$INPUT_FILE_NAME"
+
+    $_XZ -d -c $INPUT_FILE_PATH/$INPUT_FILE_NAME | $_OPENSSL cms -decrypt -binary -inkey $1 -out $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
+}
+
+function make_cert {
+    # $1 - private key location
+    # $2 - public cert location
+
+    local PRIV_KEY CA_CERT
+
+    if [ $# -ne 2 ]; then
+        # assign the default value
+        PRIV_KEY="./privkey.pem"
+        CA_CERT="./cacert.pem"
+    else
+        PRIV_KEY="$1"
+        CA_CERT="$2"
+    fi
+
+    console_output "INFO" "Creating private key - [ $PRIV_KEY ]"
+    console_output "INFO" "Creating ca certificate - [ $CA_CERT ]"
+
+    $_OPENSSL req -x509 -sha512 -newkey rsa:4096 -days 36500 \
+        -subj "/C=CC/ST=ST/L=L/O=O/CN=CN" \
+        -keyout "$PRIV_KEY" -out "$CA_CERT"
+
+    chmod 600 "$PRIV_KEY"
+    chmod 600 "$CA_CERT"
+}

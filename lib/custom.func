@@ -1,0 +1,18 @@
+# import shared functions
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/./shared.func
+
+##
+# Configuration override
+# - $1: a custom configuration file
+##
+
+# import (default) custom configuration
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../config/custom.cfg
+
+if [ ! -z $1 ] && [ -f $1 ]; then
+    # having a custom configuration file other than the default one
+    # override the default value
+
+    # override configuration settings
+    . `cd "$( dirname "$1" )" && pwd`/`basename $1`
+fi

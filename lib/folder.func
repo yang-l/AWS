@@ -1,0 +1,29 @@
+# import custom importing function
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/./custom.func
+
+##
+# directory config
+#
+# Note - this is NOT thread-safe, and should only run once during each instance execution
+# TODO - FIXME
+##
+
+__WORK_DIR_DEF__="/tmp/script/"
+__WORK_DIR_PREFIX__="work"
+
+if [ `is_empty $WORK_DIR` == true ]; then
+    # set default work directory
+    _WORK_DIR_=$__WORK_DIR_DEF__
+else
+    _WORK_DIR_=$WORK_DIR
+fi
+
+console_output "DEBUG" "Preparing directory [ $_WORK_DIR_ ]"
+mkdir -p $_WORK_DIR_
+
+# Hardcoded sub-directory, prevent to work on some root/system directory
+cd $_WORK_DIR_
+rm -r $_WORK_DIR_/$__WORK_DIR_PREFIX__* 2&>1 # clean old directories
+_WORK_DIR_=$_WORK_DIR_/$__WORK_DIR_PREFIX__-`date +%Y-%m-%d:%H:%M:%S`
+mkdir -p $_WORK_DIR_
+console_output "INFO" "Creating work directory [ $_WORK_DIR_ ]"

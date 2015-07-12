@@ -1,0 +1,20 @@
+# import custom importing function
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/./custom.func
+
+##
+# Decryption key handling
+# - This function should store private key for decryptions (May not very safe here)
+#
+# Note - this is NOT thread-safe, and should only run once during each instance execution
+# TODO - FIXME
+##
+
+## read password for descryption key
+read -sp "Enter passwork for decryption: " __DESCKEY__; echo
+
+## create a file descriptor
+exec 6<<<"$__DESCKEY__"
+unset $__DESCKEY__
+
+## export for openssl cms
+_DESC_FH_=" -passin fd:6 "
