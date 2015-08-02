@@ -1,0 +1,14 @@
+#####
+# T. - AWS
+# D. - Store user-related AWS settings
+#####
+
+# load (global) AWS variables
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../config/aws.cfg
+
+# override AWS variables
+[ ! -z "${1+is_null_and_empty}" ] && . $1
+
+# Available variables -
+# $AWS_ACCESS_KEY_ID
+# $AWS_SECRET_ACCESS_KEY
