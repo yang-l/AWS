@@ -72,13 +72,6 @@ do
     $AWS ec2 delete-security-group --group-id "${SG}" || ( console_output "ERROR" "Failed to delete the SG" && deactivate && exit 1 )
 done
 
-console_output "INFO" "Remove ALL network ACLs:"
-for NA in `($AWS ec2 describe-network-acls --query "NetworkAcls[*].NetworkAclId" || console_output "ERROR" "Failed to list network ACLs") | uniq`;
-do
-    echo "Delete ${NA}"
-#   $AWS ec2 delete-network-acl --network-acl-id "${NA}" || ( console_output "ERROR" "Failed to delete the network ACL" && deactivate && exit 1 )
-done
-
 console_output "INFO" "Remove ALL internet gateways:"
 for IG in `($AWS ec2 describe-internet-gateways --query "InternetGateways[*].InternetGatewayId" || console_output "ERROR" "Failed to list IGs") | uniq`;
 do
@@ -102,6 +95,13 @@ do
     $AWS ec2 delete-route-table --route-table-id "${RT}" || ( console_output "ERROR" "Failed to delete the route table" && deactivate && exit 1 )
 done
 
+console_output "INFO" "Remove ALL network ACLs:"
+for NA in `($AWS ec2 describe-network-acls --query "NetworkAcls[*].NetworkAclId" || console_output "ERROR" "Failed to list network ACLs") | uniq`;
+do
+    echo "Delete ${NA}"
+    $AWS ec2 delete-network-acl --network-acl-id "${NA}" || ( console_output "ERROR" "Failed to delete the network ACL" && deactivate && exit 1 )
+done
+
 console_output "INFO" "Remove ALL key pairs:"
 for K in `($AWS ec2 describe-key-pairs --query "KeyPairs[*].KeyName" || console_output "ERROR" "Failed to list key pairs") | uniq`;
 do
@@ -109,6 +109,7 @@ do
     $AWS ec2 delete-key-pair --key-name "${K}" || ( console_output "ERROR" "Failed to delete the key pair" && deactivate && exit 1 )
 done
 
+# clean up local files
 rm "$VIRTUALENV/aws.cfg"
 
 # deactivate virtualenv
