@@ -39,11 +39,18 @@ mkdir -p "${VIRTUALENV}"
 
 # parameters inside virtualenv
 AWS="`which python` "${VIRTUALENV}"/bin/aws"
-
 AWS_CONF=`dirname "${CONF_FILE}"`/`grep conf_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` # get aws config
 export AWS_CONFIG_FILE="${AWS_CONF}" # load the aws config file
-
 INS_ID=`grep instance_id ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` # get the instance id
+
+# update security group
+SEC_GRP_ID=`grep security_group_id ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'`
+OLD_IP=$($AWS ec2 describe-security-groups --group-id "${SEC_GRP_ID}" --filters "Name=ip-permission.from-port,Values=22" --query "SecurityGroups[*].IpPermissions[*].IpRanges[*].CidrIp")
+$AWS ec2 revoke-security-group-ingress --group-id "${SEC_GRP_ID}" --protocol tcp --port 22 --cidr "${OLD_IP}" || { console_output "ERROR" "Failed to remove port 22" && deactivate && exit 1 ; }
+CUR_IP=`curl -s checkip.dyndns.org|sed -e 's/.*Current IP Address: //' -e 's/<.*$//'`/32
+$AWS ec2 authorize-security-group-ingress --group-id "${SEC_GRP_ID}" --protocol tcp --port 22 --cidr "${CUR_IP}" || { console_output "ERROR" "Failed to add port 22" && deactivate && exit 1 ; }
+
+# start ami
 while true
 do
     # check if the instance is running
@@ -59,7 +66,25 @@ do
     esac
 done
 
-## TODO - run command via ssh
+# run commands on the remote instance
+SSH_RUN="`which ssh` -i `dirname ${CONF_FILE}`/`grep key_pair_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` -o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null `# FIXME - security enhancement` ec2-user@$($AWS ec2 describe-instances --instance-id "${INS_ID}" --query "Reservations[*].Instances[*].PublicIpAddress" || { console_output "ERROR" "Failed to start Instance ${INS_ID}, existing" && deactivate && exit 1 ; })"
+
+$SSH_RUN 'bash -s' <<'EOF'
+
+echo "#############################################"
+echo "Executing commands inside instance ${INS_ID}"
+echo "#############################################"
+
+# Vars
+PACKER=`eval ~/packer-bin/packer`
+
+# install packer
+[ ! -d packer-bin ] && { wget https://dl.bintray.com/mitchellh/packer/packer_0.8.6_linux_amd64.zip -O ~/packer.zip ; unzip ~/packer.zip -d ~/packer-bin ; rm ~/packer.zip ; }
+
+
+
+# end of remote command executions
+EOF
 
 # deactivate virtualenv
 deactivate

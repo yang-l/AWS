@@ -83,7 +83,7 @@ echo "security_group_id=${AWS_OUTPUT[SEC_GRP_ID]}" >> "${BUILD_RCRD}"
 
 # add port 22 to the sg
 CUR_IP=`curl -s checkip.dyndns.org|sed -e 's/.*Current IP Address: //' -e 's/<.*$//'`/32
-($AWS ec2 authorize-security-group-ingress --group-id "${AWS_OUTPUT[SEC_GRP_ID]}" --protocol tcp --port 22 --cidr "${CUR_IP}" || { console_output "ERROR" "Failed to add port 22" && deactivate && exit 1 ; })
+$AWS ec2 authorize-security-group-ingress --group-id "${AWS_OUTPUT[SEC_GRP_ID]}" --protocol tcp --port 22 --cidr "${CUR_IP}" || { console_output "ERROR" "Failed to add port 22" && deactivate && exit 1 ; }
 
 # Run an AMI instance
 AWS_OUTPUT[INST_ID]=$(($AWS ec2 run-instances --image-id "${AMI_ID}" --count 1 --instance-type t2.micro --subnet-id "${AWS_OUTPUT[SUBNET_ID]}" --associate-public-ip-address --key-name "${KEY_PAIR}" --security-group-ids "${AWS_OUTPUT[SEC_GRP_ID]}" --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"DeleteOnTermination\":true,\"SnapshotId\":\"snap-b772aec8\",\"VolumeSize\":8,\"VolumeType\":\"standard\"}}]"  --output json --query "Instances[0].InstanceId" || { console_output "ERROR" "Failed to run instances" && deactivate && exit 1 ; }) | sed -e '1!b;s/^"//' -e '$s/"$//')

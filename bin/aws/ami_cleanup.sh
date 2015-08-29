@@ -110,7 +110,8 @@ do
 done
 
 # clean up local files
-rm "$VIRTUALENV/aws.cfg"
+rm "${VIRTUALENV}/aws.cfg"
+rm -fr "${VIRTUALENV}"/EC2*
 
 # deactivate virtualenv
 deactivate
