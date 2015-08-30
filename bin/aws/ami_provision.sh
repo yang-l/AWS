@@ -67,7 +67,10 @@ do
 done
 
 # run commands on the remote instance
-SSH_RUN="`which ssh` -i `dirname ${CONF_FILE}`/`grep key_pair_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` -o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null `# FIXME - security enhancement` ec2-user@$($AWS ec2 describe-instances --instance-id "${INS_ID}" --query "Reservations[*].Instances[*].PublicIpAddress" || { console_output "ERROR" "Failed to start Instance ${INS_ID}, existing" && deactivate && exit 1 ; })"
+SSH_HOST="ec2-user@$($AWS ec2 describe-instances --instance-id "${INS_ID}" --query "Reservations[*].Instances[*].PublicIpAddress" || { console_output "ERROR" "Failed to start Instance ${INS_ID}, existing" && deactivate && exit 1 ; })"
+SSH_KEY="-i `dirname ${CONF_FILE}`/`grep key_pair_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'`"
+SSH_OPT="-o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null `# FIXME - security enhancement` -tt"
+SSH_RUN="`which ssh` ${SSH_KEY} ${SSH_OPT} ${SSH_HOST}"
 
 $SSH_RUN 'bash -s' <<'EOF'
 
@@ -77,11 +80,23 @@ echo "#############################################"
 
 # Vars
 PACKER=`eval ~/packer-bin/packer`
+PIP=`eval which pip`
 
 # install packer
+echo "Check Packet ..."
 [ ! -d packer-bin ] && { wget https://dl.bintray.com/mitchellh/packer/packer_0.8.6_linux_amd64.zip -O ~/packer.zip ; unzip ~/packer.zip -d ~/packer-bin ; rm ~/packer.zip ; }
 
+# upgrade pip (when necessary)
+echo "Check pip ..."
+sudo $PIP install --upgrade pip -q || { echo "Failed to upgrade pip" ; exit 1 ; }
 
+# install virtualenv
+echo "Check virtualenv ..."
+$PIP install --upgrade --user virtualenv -q || { echo "Failed to install virtuallenv using pip, existing" ;  exit 1 ; }
+
+
+
+exit 0
 
 # end of remote command executions
 EOF
