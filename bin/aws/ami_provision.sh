@@ -10,10 +10,12 @@ PRJ_ROOT="`cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../../"
 . "${PRJ_ROOT}"/lib/shared.func
 
 unset CONF_FILE
-while getopts :c: option
+unset INTERACTIVE_SHELL
+while getopts :c:i option
 do
     case "$option" in
         c) CONF_FILE=$OPTARG ;;
+        i) INTERACTIVE_SHELL=true ;; # enable interactive shell
         \?) echo "Invalid option: -$OPTARG" >&2 ;; # Invalid options
         :) echo "Option -$OPTARG requires an argument" >&2 ;; # Require an argument
     esac
@@ -70,15 +72,23 @@ done
 # run commands on the remote instance
 SSH_HOST="ec2-user@$($AWS ec2 describe-instances --instance-id "${INS_ID}" --query "Reservations[*].Instances[*].PublicIpAddress" || { console_output "ERROR" "Failed to start Instance ${INS_ID}, existing" && deactivate && exit 1 ; })"
 SSH_KEY="-i `dirname ${CONF_FILE}`/`grep key_pair_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'`"
-SSH_OPT="-o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null `# FIXME - security enhancement` -tt"
+SSH_OPT="-o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null `# FIXME - security enhancement` -t"
 SSH_RUN="`which ssh` ${SSH_KEY} ${SSH_OPT} ${SSH_HOST}"
 
+# logon setup
 $SSH_RUN 'bash -s ' <<EOF
+# run before interactive logon
 echo "#############################################"
 echo "Executing commands inside instance ${INS_ID}"
 echo "#############################################"
+EOF
 
+# interactive shell
+[ "${INTERACTIVE_SHELL}" == true ] && ${SSH_RUN}
 
+# logoff clean up
+$SSH_RUN 'bash -s ' <<EOF
+# run when log off the ssh session
 EOF
 
 # deactivate virtualenv
