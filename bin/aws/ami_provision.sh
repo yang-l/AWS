@@ -76,20 +76,32 @@ SSH_OPT="-o ConnectTimeout=30 -o StrictHostKeyChecking=no -o LogLevel=ERROR -o U
 SSH_RUN="`which ssh` ${SSH_KEY} ${SSH_OPT} ${SSH_HOST}"
 
 # logon setup
-$SSH_RUN 'bash -s ' <<EOF
+LOGON=$(cat <<EOF
+EOF
+)
+if [ ! -z "${LOGON// }" ]; then
+    $SSH_RUN 'bash -s ' <<EOF
 # run before interactive logon
 echo "#############################################"
 echo "Executing commands inside instance ${INS_ID}"
 echo "#############################################"
+eval "${LOGON}"
 EOF
+fi
 
 # interactive shell
-[ "${INTERACTIVE_SHELL}" == true ] && ${SSH_RUN}
+if [ "${INTERACTIVE_SHELL}" == true ] ; then ${SSH_RUN} ; fi
 
 # logoff clean up
-$SSH_RUN 'bash -s ' <<EOF
-# run when log off the ssh session
+LOGOFF=$(cat <<EOF
 EOF
+)
+if [ ! -z "${LOGOFF// }" ]; then
+    $SSH_RUN 'bash -s ' <<EOF
+# run when log off the ssh session
+eval "${LOGOFF}"
+EOF
+fi
 
 # deactivate virtualenv
 deactivate
