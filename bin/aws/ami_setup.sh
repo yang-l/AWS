@@ -86,7 +86,30 @@ CUR_IP=`curl -s checkip.dyndns.org|sed -e 's/.*Current IP Address: //' -e 's/<.*
 $AWS ec2 authorize-security-group-ingress --group-id "${AWS_OUTPUT[SEC_GRP_ID]}" --protocol tcp --port 22 --cidr "${CUR_IP}" || { console_output "ERROR" "Failed to add port 22" && deactivate && exit 1 ; }
 
 # Run an AMI instance
-AWS_OUTPUT[INST_ID]=$(($AWS ec2 run-instances --image-id "${AMI_ID}" --count 1 --instance-type t2.micro --subnet-id "${AWS_OUTPUT[SUBNET_ID]}" --associate-public-ip-address --key-name "${KEY_PAIR}" --security-group-ids "${AWS_OUTPUT[SEC_GRP_ID]}" --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"DeleteOnTermination\":true,\"SnapshotId\":\"snap-b772aec8\",\"VolumeSize\":8,\"VolumeType\":\"standard\"}}]"  --output json --query "Instances[0].InstanceId" || { console_output "ERROR" "Failed to run instances" && deactivate && exit 1 ; }) | sed -e '1!b;s/^"//' -e '$s/"$//')
+PROV_SETUP=$(cat <<EOF
+#!/usr/bin/env bash
+# logged in and run as the root user
+
+# upgrade pip (when necessary)
+echo "Upgrade pip ... (root)"
+pip install --upgrade pip || echo "Failed to upgrade pip"
+
+# upgrade virtualenv
+echo "Install virtualenv ... (root)"
+/usr/local/bin/pip install --upgrade virtualenv || echo "Failed to install virtuallenv via pip"
+
+# install packer
+echo "Install Packer ..."
+cd /usr/local/
+wget https://dl.bintray.com/mitchellh/packer/packer_0.8.6_linux_amd64.zip -O ./packer.zip
+unzip ./packer.zip -d ./bin
+rm ./packer.zip
+
+exit 0
+EOF
+) # end of $PROV_SETUP
+
+AWS_OUTPUT[INST_ID]=$(($AWS ec2 run-instances --image-id "${AMI_ID}" --count 1 --instance-type t2.micro --subnet-id "${AWS_OUTPUT[SUBNET_ID]}" --associate-public-ip-address --key-name "${KEY_PAIR}" --security-group-ids "${AWS_OUTPUT[SEC_GRP_ID]}" --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"DeleteOnTermination\":true,\"SnapshotId\":\"snap-b772aec8\",\"VolumeSize\":8,\"VolumeType\":\"gp2`#standard`\"}}]" --user-data "${PROV_SETUP}" --output json --query "Instances[0].InstanceId" || { console_output "ERROR" "Failed to run instances" && deactivate && exit 1 ; }) | sed -e '1!b;s/^"//' -e '$s/"$//')
 echo "instance_id=${AWS_OUTPUT[INST_ID]}" >> "${BUILD_RCRD}"
 
 # deactivate virtualenv
