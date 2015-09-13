@@ -112,6 +112,11 @@ EOF
 AWS_OUTPUT[INST_ID]=$(($AWS ec2 run-instances --image-id "${AMI_ID}" --count 1 --instance-type t2.micro --subnet-id "${AWS_OUTPUT[SUBNET_ID]}" --associate-public-ip-address --key-name "${KEY_PAIR}" --security-group-ids "${AWS_OUTPUT[SEC_GRP_ID]}" --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"DeleteOnTermination\":true,\"SnapshotId\":\"snap-b772aec8\",\"VolumeSize\":8,\"VolumeType\":\"gp2`#standard`\"}}]" --user-data "${PROV_SETUP}" --output json --query "Instances[0].InstanceId" || { console_output "ERROR" "Failed to run instances" && deactivate && exit 1 ; }) | sed -e '1!b;s/^"//' -e '$s/"$//')
 echo "instance_id=${AWS_OUTPUT[INST_ID]}" >> "${BUILD_RCRD}"
 
+# copy config files to S3
+if [ `$AWS s3 ls | grep -i "${INST_S3PATH}" | wc -l` == 0 ] ; then $AWS s3 mb s3://"${INST_S3PATH}" ; fi # check S3 bucket
+
+$AWS s3 cp "${BUILD_CONF}" s3://"${INST_S3PATH}"/"${AWS_OUTPUT[INST_ID]}" --recursive --sse --no-guess-mime-type --only-show-errors
+
 # deactivate virtualenv
 deactivate
 

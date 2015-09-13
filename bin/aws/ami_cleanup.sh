@@ -110,8 +110,13 @@ do
 done
 
 # clean up local files
+console_output "INFO" "Remove ALL local config files:"
 rm "${VIRTUALENV}/aws.cfg"
 rm -fr "${VIRTUALENV}"/EC2*
+
+# remove S3 backet
+console_output "INFO" "Remove ALL config files in S3:"
+$AWS s3 rb s3://"${INST_S3PATH}" --force
 
 # deactivate virtualenv
 deactivate
