@@ -9,20 +9,20 @@ PRJ_ROOT="`cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../../"
 
 . "${PRJ_ROOT}"/lib/shared.func
 
+unset CONF_INSTANCE
 unset CONF_FILE
 unset INTERACTIVE_SHELL
-while getopts :c:i option
+while getopts :i:s option
 do
     case "$option" in
-        c) CONF_FILE=$OPTARG ;;
-        i) INTERACTIVE_SHELL=true ;; # enable interactive shell
+        i) CONF_INSTANCE=$OPTARG ;;
+        s) INTERACTIVE_SHELL=true ;; # enable interactive shell
         \?) echo "Invalid option: -$OPTARG" >&2 ;; # Invalid options
         :) echo "Option -$OPTARG requires an argument" >&2 ;; # Require an argument
     esac
 done
 shift $(($OPTIND-1))
-[ -z "${CONF_FILE+is_empty_and_null}" ] && echo "Must supply a config file with -c" && exit 1
-[ ! -f "${CONF_FILE}" ] && echo "${CONF_FILE} is not a regular file" && exit 1
+[ -z "${CONF_INSTANCE+is_empty_and_null}" ] && echo "Must supply an instance ID with -i" && exit 1
 
 . "${PRJ_ROOT}"/lib/aws.func # AWS setup
 . "${PRJ_ROOT}"/lib/folder.func # @ $_WORK_DIR
@@ -39,9 +39,15 @@ $PIP install --upgrade --user virtualenv -q || { console_output "ERROR" "Failed 
 mkdir -p "${VIRTUALENV}"
 ~/.local/bin/virtualenv $VIRTUALENV -q
 . $VIRTUALENV/bin/activate # inside virtualenv
+AWS="`which python` ${VIRTUALENV}/bin/aws"
+
+# get instance info from S3
+$AWS s3 cp s3://"${INST_S3PATH}/${CONF_INSTANCE}" "${VIRTUALENV}/${CONF_INSTANCE}" --recursive --sse --no-guess-mime-type --only-show-errors || { console_output "ERROR" "Failed to get ${CONF_INSTANCE} from S3, existing" ; deactivate ; exit 1 ; }
+CONF_FILE="${VIRTUALENV}/${CONF_INSTANCE}/build.info"
+[ ! -f ${CONF_FILE} ] && { console_output "ERROR" "${CONF_FILE} is not a regular file" ; deactivate ; exit 1 ; }
+chmod 600 "`dirname "${CONF_FILE}"`/`grep key_pair_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'`" # change .pem file mode
 
 # parameters inside virtualenv
-AWS="`which python` "${VIRTUALENV}"/bin/aws"
 AWS_CONF=`dirname "${CONF_FILE}"`/`grep conf_file ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` # get aws config
 export AWS_CONFIG_FILE="${AWS_CONF}" # load the aws config file
 INS_ID=`grep instance_id ${CONF_FILE} | sed -e 's/^.*=\(.*\)$/\1/'` # get the instance id
@@ -102,6 +108,9 @@ if [ ! -z "${LOGOFF// }" ]; then
 eval "${LOGOFF}"
 EOF
 fi
+
+# rm local records
+rm -fr "${VIRTUALENV}/${CONF_INSTANCE}"
 
 # deactivate virtualenv
 deactivate
