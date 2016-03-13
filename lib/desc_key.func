@@ -9,12 +9,15 @@
 # TODO - FIXME
 ##
 
-## read password for descryption key
-read -sp "Enter passwork for decryption: " __DESCKEY__; echo
+function read_key {
+    ## read password for descryption key
+    read -sp "Enter passwork for decryption: " __DESCKEY__ ; echo
 
-## create a file descriptor
-exec 6<<<"$__DESCKEY__"
-unset $__DESCKEY__
+    ## create a file descriptor
+    exec 6<<<"${__DESCKEY__}"
+    unset -f "${__DESCKEY__}"
+}
 
-## export for openssl cms
-_DESC_FH_=" -passin fd:6 "
+function clear_key {
+    exec 6<<<""
+}

@@ -50,7 +50,7 @@ function encrypt_file {
 
     console_output "INFO" "Encrypting $INPUT_FILE_PATH/$INPUT_FILE_NAME"
 
-    $_OPENSSL cms -encrypt -aes256 -binary -indef -in $INPUT_FILE_PATH/$INPUT_FILE_NAME $1 | $_XZ -c -> $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
+    $_OPENSSL cms -encrypt -aes-256-cfb -binary -indef -in $INPUT_FILE_PATH/$INPUT_FILE_NAME $1 | $_XZ -c -> $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
 }
 
 function decrypt_file {
@@ -82,7 +82,7 @@ function decrypt_file {
 
     console_output "INFO" "Decrypting $INPUT_FILE_PATH/$INPUT_FILE_NAME"
 
-    $_XZ -d -c $INPUT_FILE_PATH/$INPUT_FILE_NAME | $_OPENSSL cms -decrypt -binary -inkey $1 -out $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
+    $_XZ -d -c $INPUT_FILE_PATH/$INPUT_FILE_NAME | $_OPENSSL cms -decrypt -binary -passin fd:6 -inkey $1 -out $OUTPUT_FILE_PATH/$OUTPUT_FILE_NAME
 }
 
 function make_cert {
@@ -93,8 +93,8 @@ function make_cert {
 
     if [ $# -ne 2 ]; then
         # assign the default value
-        PRIV_KEY="./privkey.pem"
-        CA_CERT="./cacert.pem"
+        PRIV_KEY="./privkey.dec.pem"
+        CA_CERT="./cert.enc.pem"
     else
         PRIV_KEY="$1"
         CA_CERT="$2"
@@ -103,7 +103,8 @@ function make_cert {
     console_output "INFO" "Creating private key - [ $PRIV_KEY ]"
     console_output "INFO" "Creating ca certificate - [ $CA_CERT ]"
 
-    $_OPENSSL req -x509 -sha512 -newkey rsa:4096 -days 36500 \
+    $_OPENSSL req -x509 -sha512 -newkey rsa:16384 -days 36500 -set_serial 0 -utf8 \
+        -rand <($_OPENSSL rand -hex 1024):<($_OPENSSL rand -hex 8192):<($_OPENSSL rand -hex 65536) \
         -subj "/C=CC/ST=ST/L=L/O=O/CN=CN" \
         -keyout "$PRIV_KEY" -out "$CA_CERT"
 

@@ -2,6 +2,7 @@
 
 # import file encryption library
 . `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../lib/file_encryption.func
+. `cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`/../lib/desc_key.func
 
 function usage {
 
